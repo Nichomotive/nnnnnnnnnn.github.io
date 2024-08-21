@@ -1,0 +1,115 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Recognition Web App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+        }
+        video, canvas {
+            display: block;
+            margin: 20px auto;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Object Recognition Web App</h1>
+    </header>
+
+    <video id="video" width="320" height="240" autoplay></video>
+    <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+
+    <div>
+        <button id="scan-learn">Scan to Learn</button>
+        <button id="scan-identify">Scan to Identify</button>
+    </div>
+    <p id="status">Status: Waiting for user action...</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script>
+        // Access the camera
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const statusText = document.getElementById('status');
+        const ctx = canvas.getContext('2d');
+        let model;
+
+        // Load the pre-trained MobileNet model
+        async function loadModel() {
+            model = await mobilenet.load();
+            statusText.innerText = 'Model Loaded!';
+        }
+
+        // Start the camera stream
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Error accessing camera: ", err);
+                });
+        }
+
+        // Capture an image from the video stream
+        function captureImage() {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return tf.browser.fromPixels(canvas);
+        }
+
+        // Learn new object
+        document.getElementById('scan-learn').addEventListener('click', async () => {
+            statusText.innerText = 'Scanning for Learning...';
+            const imageTensor = captureImage();
+            // TODO: Implement custom training with the captured image
+            // You can store this tensor for later recognition or use a method to classify and label it
+            statusText.innerText = 'Object learned successfully!';
+            imageTensor.dispose();
+        });
+
+        // Identify object
+        document.getElementById('scan-identify').addEventListener('click', async () => {
+            statusText.innerText = 'Scanning for Identification...';
+            const imageTensor = captureImage();
+            const predictions = await model.classify(imageTensor);
+
+            // Display results with confidence score
+            if (predictions && predictions.length > 0) {
+                const highestPrediction = predictions[0];
+                statusText.innerText = `Object: ${highestPrediction.className}, Confidence: ${(highestPrediction.probability * 100).toFixed(2)}%`;
+            } else {
+                statusText.innerText = 'Unable to identify the object.';
+            }
+            imageTensor.dispose();
+        });
+
+        // Initialize the app
+        loadModel();
+        startCamera();
+    </script>
+</body>
+</html>
